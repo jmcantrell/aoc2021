@@ -1,28 +1,30 @@
 use std::fs;
 
-fn count_window_increases(depths: &[u32], size: usize) -> u32 {
+fn count_window_increases(values: &[u32], size: usize) -> u32 {
     let mut increases = 0;
-    let mut prev_depth = u32::MAX;
+    let mut prev_value = u32::MAX;
 
-    for window in depths.windows(size) {
-        let depth: u32 = window.iter().sum();
-        if depth > prev_depth {
+    for window in values.windows(size) {
+        let value: u32 = window.iter().sum();
+        if value > prev_value {
             increases += 1;
         }
-        prev_depth = depth;
+        prev_value = value;
     }
 
     increases
 }
 
-fn main() {
-    let input = fs::read_to_string("input").unwrap();
-    let depths: Vec<u32> = input
-        .trim()
+fn parse_depths(s: &str) -> Vec<u32> {
+    s.trim()
         .split_whitespace()
         .map(|line| line.parse().unwrap())
-        .collect();
+        .collect()
+}
 
+fn main() {
+    let input = fs::read_to_string("input").unwrap();
+    let depths = parse_depths(&input);
     dbg!(count_window_increases(&depths, 3));
 }
 
@@ -35,5 +37,12 @@ mod tests {
         assert_eq!(count_window_increases(&[], 2), 0);
         assert_eq!(count_window_increases(&[1, 1, 1, 1], 2), 0);
         assert_eq!(count_window_increases(&[1, 1, 2, 2], 2), 2);
+    }
+
+    #[test]
+    fn test_example() {
+        let input = fs::read_to_string("input-test").unwrap();
+        let depths = parse_depths(&input);
+        assert_eq!(count_window_increases(&depths, 3), 5);
     }
 }
