@@ -61,78 +61,64 @@ impl AddAssign<Movement> for Position {
     }
 }
 
-peg::parser! {
-    grammar command_parser() for str {
-        pub rule parse() -> Vec<Command>
-            = c:command() ** "\n" "\n"? { c }
+fn get_position(commands: &[Command]) -> Position {
+    let mut position = Position::new();
 
-        rule command() -> Command
-            = movement()
-
-        rule movement() -> Command
-            = d:direction() " " m:magnitude() { Command::Move(Movement{ direction: d, magnitude: m }) }
-
-        rule direction() -> Direction
-            = forward() / up() / down()
-
-        rule forward() -> Direction
-            = "forward" { Direction::Forward }
-
-        rule down() -> Direction
-            = "down" { Direction::Down }
-
-        rule up() -> Direction
-            = "up" { Direction::Up }
-
-        rule magnitude() -> usize
-            = s:$(['0'..='9']+) { s.parse().unwrap() }
-    }
-}
-
-fn run(position: &mut Position, commands: &[Command]) {
     for command in commands {
         match command {
             Command::Move(movement) => {
-                *position += *movement;
+                position += *movement;
             }
         }
+    }
+
+    position
+}
+
+peg::parser! {
+    grammar command_parser() for str {
+        pub rule parse() -> Vec<Command>
+            = commands:(parse_command() ** "\n") "\n"?{
+                commands
+            }
+
+        rule parse_command() -> Command
+            = parse_movement()
+
+        rule parse_movement() -> Command
+            = direction:parse_direction() " " magnitude:parse_uint() {
+                Command::Move(Movement{ direction, magnitude })
+            }
+
+        rule parse_direction() -> Direction
+            = parse_forward() / parse_up() / parse_down()
+
+        rule parse_forward() -> Direction
+            = "forward" { Direction::Forward }
+
+        rule parse_down() -> Direction
+            = "down" { Direction::Down }
+
+        rule parse_up() -> Direction
+            = "up" { Direction::Up }
+
+        rule parse_uint() -> usize
+            = s:$(['0'..='9']+) {
+                s.parse().unwrap()
+            }
     }
 }
 
 fn main() {
     let input = fs::read_to_string("input").unwrap();
     let commands = command_parser::parse(&input).unwrap();
-    let mut position = Position::new();
-    run(&mut position, &commands);
-    dbg!(position);
+    let position = get_position(&commands);
     dbg!(position.distance * position.depth);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_input_parser() {
-        assert_eq!(command_parser::parse("").unwrap(), &[]);
-        assert_eq!(
-            command_parser::parse("forward 1\ndown 2\nup 3\n").unwrap(),
-            &[
-                Command::Move(Movement {
-                    direction: Direction::Forward,
-                    magnitude: 1
-                }),
-                Command::Move(Movement {
-                    direction: Direction::Down,
-                    magnitude: 2
-                }),
-                Command::Move(Movement {
-                    direction: Direction::Up,
-                    magnitude: 3
-                })
-            ]
-        );
-    }
 
     #[test]
     fn test_position_add() {
@@ -175,5 +161,13 @@ mod tests {
                 depth: 5
             }
         );
+    }
+
+    #[test]
+    fn test_example() {
+        let input = fs::read_to_string("input-test").unwrap();
+        let commands = command_parser::parse(&input).unwrap();
+        let position = get_position(&commands);
+        assert_eq!(position.distance * position.depth, 150);
     }
 }
