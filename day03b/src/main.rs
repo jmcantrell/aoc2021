@@ -6,56 +6,71 @@ fn get_bit(number: isize, i: usize) -> bool {
     number & mask == mask
 }
 
-fn get_width(number: isize) -> usize {
+fn get_bit_width(number: isize) -> usize {
+    if number == 0 {
+        return 0;
+    }
     let mut n = number;
-    let mut width = 0;
-
+    let mut index = 0;
     while n != 0 {
-        width += 1;
+        index += 1;
         n >>= 1;
     }
-
-    width
+    index
 }
 
-fn get_width_all(numbers: &[isize]) -> usize {
-    let mut mask: isize = 0;
+fn get_max_bit_width(numbers: &[isize]) -> usize {
+    let mut composite = 0;
     for number in numbers {
-        mask |= number;
+        composite |= number;
     }
-    get_width(mask)
+    get_bit_width(composite)
 }
 
-fn get_rating<F>(numbers: &[isize], width: usize, judge: F) -> isize
+fn get_rating<F>(numbers: &[isize], judge: F) -> isize
 where
     F: Fn(isize) -> bool,
 {
+    let width = get_max_bit_width(numbers);
+
+    if width == 0 {
+        return 0;
+    }
+
     let mut indexes: HashSet<usize> = (0..numbers.len()).collect();
+
     for i in (0..width).rev() {
         let mut balance: isize = 0;
-        for index in indexes.iter() {
-            if get_bit(numbers[*index], i) {
+
+        for &index in indexes.iter() {
+            if get_bit(numbers[index], i) {
                 balance += 1;
             } else {
                 balance -= 1;
             }
         }
-        let bit = judge(balance);
-        indexes.retain(|index| get_bit(numbers[*index], i) == bit);
+
+        indexes.retain(|index| get_bit(numbers[*index], i) == judge(balance));
+
         if indexes.len() == 1 {
             break;
         }
     }
+
     let index = indexes.drain().next().unwrap();
     numbers[index]
 }
 
-fn get_oxygen_generator_rating(numbers: &[isize], width: usize) -> isize {
-    get_rating(numbers, width, |balance| balance >= 0)
+fn get_oxygen_generator_rating(numbers: &[isize]) -> isize {
+    get_rating(numbers, |balance| balance >= 0)
 }
 
-fn get_co2_scrubber_rating(numbers: &[isize], width: usize) -> isize {
-    get_rating(numbers, width, |balance| balance < 0)
+fn get_co2_scrubber_rating(numbers: &[isize]) -> isize {
+    get_rating(numbers, |balance| balance < 0)
+}
+
+fn get_life_support_rating(numbers: &[isize]) -> isize {
+    get_oxygen_generator_rating(numbers) * get_co2_scrubber_rating(numbers)
 }
 
 fn parse_input(s: &str) -> Vec<isize> {
@@ -68,19 +83,12 @@ fn parse_input(s: &str) -> Vec<isize> {
 fn main() {
     let input = fs::read_to_string("input").unwrap();
     let numbers = parse_input(&input);
-    let width = get_width_all(&numbers);
-    let ogr = get_oxygen_generator_rating(&numbers, width);
-    let csr = get_co2_scrubber_rating(&numbers, width);
-
-    dbg!(ogr * csr);
+    dbg!(get_life_support_rating(&numbers));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const TEST_INPUT: &str =
-        "00100\n11110\n10110\n10111\n10101\n01111\n00111\n11100\n10000\n11001\n00010\n01010";
 
     #[test]
     fn test_get_bit() {
@@ -90,12 +98,22 @@ mod tests {
     }
 
     #[test]
-    fn test_rating() {
-        let numbers = parse_input(TEST_INPUT);
-        let width = get_width_all(&numbers);
-        let ogr = get_oxygen_generator_rating(&numbers, width);
-        let csr = get_co2_scrubber_rating(&numbers, width);
-        assert_eq!(ogr, 23);
-        assert_eq!(csr, 10);
+    fn test_get_bit_width() {
+        assert_eq!(get_bit_width(0), 0);
+        assert_eq!(get_bit_width(1), 1);
+        assert_eq!(get_bit_width(4), 3);
+    }
+
+    #[test]
+    fn test_get_max_bit_width() {
+        assert_eq!(get_max_bit_width(&[0]), 0);
+        assert_eq!(get_max_bit_width(&[0,1,2,3,4]), 3);
+    }
+
+    #[test]
+    fn test_example() {
+        let input = fs::read_to_string("input-test").unwrap();
+        let numbers = parse_input(&input);
+        dbg!(get_life_support_rating(&numbers));
     }
 }

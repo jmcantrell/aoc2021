@@ -1,7 +1,5 @@
 use std::fs;
 
-const WIDTH: usize = 12;
-
 fn get_bit(number: isize, i: usize) -> bool {
     let mask = 1 << i;
     number & mask == mask
@@ -11,17 +9,32 @@ fn set_bit(number: &mut isize, i: usize) {
     *number |= 1 << i;
 }
 
-fn main() {
-    let input = fs::read_to_string("input").unwrap();
-    let numbers: Vec<isize> = input
-        .trim()
-        .split_whitespace()
-        .map(|s| isize::from_str_radix(s, 2).unwrap())
-        .collect();
+fn get_bit_width(number: isize) -> usize {
+    if number == 0 {
+        return 0;
+    }
+    let mut n = number;
+    let mut index = 0;
+    while n != 0 {
+        index += 1;
+        n >>= 1;
+    }
+    index
+}
 
-    let mut balance = [0; WIDTH];
-
+fn get_max_bit_width(numbers: &[isize]) -> usize {
+    let mut composite = 0;
     for number in numbers {
+        composite |= number;
+    }
+    get_bit_width(composite)
+}
+
+fn get_power_consumption(numbers: &[isize]) -> isize {
+    let width = get_max_bit_width(numbers);
+    let mut balance = vec![0; width];
+
+    for &number in numbers {
         for (i, b) in balance.iter_mut().enumerate() {
             if get_bit(number, i) {
                 *b += 1;
@@ -42,7 +55,20 @@ fn main() {
         }
     }
 
-    dbg!(gamma * epsilon);
+    gamma * epsilon
+}
+
+fn parse_numbers(s: &str) -> Vec<isize> {
+    s.trim()
+        .split_whitespace()
+        .map(|s| isize::from_str_radix(s, 2).unwrap())
+        .collect()
+}
+
+fn main() {
+    let input = fs::read_to_string("input").unwrap();
+    let numbers = parse_numbers(&input);
+    dbg!(get_power_consumption(&numbers));
 }
 
 #[cfg(test)]
@@ -61,5 +87,25 @@ mod tests {
         let mut number = 0;
         set_bit(&mut number, 2);
         assert_eq!(number, 4);
+    }
+
+    #[test]
+    fn test_get_bit_width() {
+        assert_eq!(get_bit_width(0), 0);
+        assert_eq!(get_bit_width(1), 1);
+        assert_eq!(get_bit_width(4), 3);
+    }
+
+    #[test]
+    fn test_get_max_bit_width() {
+        assert_eq!(get_max_bit_width(&[0]), 0);
+        assert_eq!(get_max_bit_width(&[0, 1, 2, 3, 4]), 3);
+    }
+
+    #[test]
+    fn test_example() {
+        let input = fs::read_to_string("input-test").unwrap();
+        let numbers = parse_numbers(&input);
+        assert_eq!(get_power_consumption(&numbers), 198);
     }
 }
