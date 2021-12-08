@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::fs;
 
 fn get_diff(a: usize, b: usize) -> usize {
@@ -8,17 +9,26 @@ fn get_diff(a: usize, b: usize) -> usize {
     }
 }
 
-fn get_n_triangle_numbers(n: usize) -> Vec<usize> {
-    let mut numbers = vec![0];
-    let mut prev = numbers[0];
-
-    for i in 1..=n {
-        let number = prev + i;
-        prev = number;
-        numbers.push(number);
+fn get_mean(values: &[usize]) -> Option<f64> {
+    if values.is_empty() {
+        return None;
     }
 
-    numbers
+    Some(values.iter().sum::<usize>() as f64 / values.len() as f64)
+}
+
+fn get_nth_triangular_number(n: usize) -> usize {
+    n * (n + 1) / 2
+}
+
+fn get_fuel_cost_for_position(initial_positions: &[usize], target_position: usize) -> usize {
+    let mut fuel_cost = 0;
+
+    for &position in initial_positions.iter() {
+        fuel_cost += get_nth_triangular_number(get_diff(position, target_position));
+    }
+
+    fuel_cost
 }
 
 fn get_fuel_cost(positions: &[usize]) -> usize {
@@ -26,25 +36,12 @@ fn get_fuel_cost(positions: &[usize]) -> usize {
         return 0;
     }
 
-    let min_target = *positions.iter().min().unwrap();
-    let max_target = *positions.iter().max().unwrap();
-    let mut min_cost = usize::MAX;
+    let mean = get_mean(positions).unwrap();
 
-    let triangle_numbers = get_n_triangle_numbers(max_target as usize);
-
-    for target in min_target..=max_target {
-        let mut target_cost = 0;
-
-        for &position in positions.iter() {
-            target_cost += triangle_numbers[get_diff(position, target)];
-        }
-
-        if target_cost < min_cost {
-            min_cost = target_cost;
-        }
-    }
-
-    min_cost
+    min(
+        get_fuel_cost_for_position(positions, mean.floor() as usize),
+        get_fuel_cost_for_position(positions, mean.ceil() as usize),
+    )
 }
 
 fn parse_positions(s: &str) -> Vec<usize> {
@@ -70,10 +67,18 @@ mod tests {
     }
 
     #[test]
-    fn test_get_n_triangle_numbers() {
-        assert_eq!(get_n_triangle_numbers(0), vec![0]);
-        assert_eq!(get_n_triangle_numbers(1), vec![0, 1]);
-        assert_eq!(get_n_triangle_numbers(4), vec![0, 1, 3, 6, 10]);
+    fn test_get_mean() {
+        assert_eq!(get_mean(&[]), None);
+        assert_eq!(get_mean(&[1]), Some(1.0));
+        assert_eq!(get_mean(&[1, 2]), Some(1.5));
+        assert_eq!(get_mean(&[0, 4, 2, 1, 3]), Some(2.0));
+    }
+
+    #[test]
+    fn test_get_nth_triangle_numbers() {
+        assert_eq!(get_nth_triangular_number(0), 0);
+        assert_eq!(get_nth_triangular_number(1), 1);
+        assert_eq!(get_nth_triangular_number(4), 10);
     }
 
     #[test]
