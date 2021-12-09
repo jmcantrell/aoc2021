@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 
 type Digit = u8;
@@ -25,87 +25,50 @@ fn create_number(digits: &[Digit]) -> Option<u64> {
     Some(number)
 }
 
-fn count_pattern_segments(pattern: Pattern) -> usize {
-    let mut count = 0;
-    let mut n = pattern as usize;
-
-    while n != 0 {
-        count += n & 1;
-        n >>= 1;
-    }
-
-    count
-}
-
-fn pattern_difference(patterns: &[Pattern]) -> Pattern {
-    if patterns.is_empty() {
-        return 0;
-    }
-
-    let mut patterns = patterns.iter();
-    let mut result = *patterns.next().unwrap();
-
-    for &pattern in patterns {
-        result &= !pattern;
-    }
-
-    result
-}
-
-fn merge_patterns(patterns: &[Pattern]) -> Pattern {
-    let mut result = 0;
-
-    for &pattern in patterns {
-        result |= pattern;
-    }
-
-    result
-}
-
-fn deduce_pattern(patterns: &HashSet<Pattern>, size: usize, partial: Pattern) -> Pattern {
-    for &pattern in patterns {
-        if count_pattern_segments(pattern) == size && pattern_difference(&[partial, pattern]) == 0 {
-            return pattern;
-        }
-    }
-    unreachable!()
-}
-
 fn deduce_signal_mapping(patterns: &[Pattern]) -> HashMap<Pattern, Digit> {
     let mut known: [Pattern; 10] = Default::default();
-    let mut unknown: HashSet<Pattern> = Default::default();
+    let mut unknown: Vec<Pattern> = Default::default();
 
     for &pattern in patterns {
-        let digit = match count_pattern_segments(pattern) {
+        let digit = match pattern.count_ones() {
             2 => 1,
             3 => 7,
             4 => 4,
             7 => 8,
             _ => {
-                unknown.insert(pattern);
+                unknown.push(pattern);
                 continue;
             }
         };
         known[digit] = pattern;
     }
 
-    known[9] = deduce_pattern(&unknown, 6, merge_patterns(&[known[4], known[7]]));
-    unknown.remove(&known[9]);
+    let mask5 = known[1] ^ known[4];
+    let mask6 = known[7] | known[4];
 
-    known[3] = deduce_pattern(&unknown, 5, known[7]);
-    unknown.remove(&known[3]);
-
-    known[6] = deduce_pattern(&unknown, 6, pattern_difference(&[known[8], known[1]]));
-    unknown.remove(&known[6]);
-
-    known[0] = deduce_pattern(&unknown, 6, 0);
-    unknown.remove(&known[0]);
-
-    known[2] = deduce_pattern(&unknown, 5, pattern_difference(&[known[8], known[9]]));
-    unknown.remove(&known[2]);
-
-    known[5] = deduce_pattern(&unknown, 5, pattern_difference(&[known[8], known[2]]));
-    unknown.remove(&known[5]);
+    for pattern in unknown {
+        match pattern.count_ones() {
+            5 => {
+                if (pattern ^ known[8]) & known[1] == 0 {
+                    known[3] = pattern;
+                } else if pattern & mask5 == mask5 {
+                    known[5] = pattern;
+                } else {
+                    known[2] = pattern;
+                }
+            }
+            6 => {
+                if (pattern ^ known[8]) & known[1] != 0 {
+                    known[6] = pattern;
+                } else if pattern & mask6 == mask6 {
+                    known[9] = pattern;
+                } else {
+                    known[0] = pattern;
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
 
     known
         .iter()
@@ -185,28 +148,6 @@ mod tests {
         assert_eq!(create_number(&[]), None);
         assert_eq!(create_number(&[1]), Some(1));
         assert_eq!(create_number(&[1, 2, 3]), Some(123));
-    }
-
-    #[test]
-    fn test_pattern_difference() {
-        assert_eq!(pattern_difference(&[]), 0);
-        assert_eq!(pattern_difference(&[1]), 1);
-        assert_eq!(pattern_difference(&[0b101, 0b010]), 0b101);
-        assert_eq!(pattern_difference(&[0b111, 0b010, 0b001]), 0b100);
-    }
-
-    #[test]
-    fn test_merge_patterns() {
-        assert_eq!(merge_patterns(&[]), 0);
-        assert_eq!(merge_patterns(&[1]), 1);
-        assert_eq!(merge_patterns(&[0b100, 0b010, 0b001]), 0b111);
-    }
-
-    #[test]
-    fn test_count_pattern_segments() {
-        assert_eq!(count_pattern_segments(0), 0);
-        assert_eq!(count_pattern_segments(1), 1);
-        assert_eq!(count_pattern_segments(0b101), 2);
     }
 
     #[test]
