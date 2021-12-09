@@ -27,46 +27,52 @@ fn create_number(digits: &[Digit]) -> Option<u64> {
 
 fn deduce_signal_mapping(patterns: &[Pattern]) -> HashMap<Pattern, Digit> {
     let mut known: [Pattern; 10] = Default::default();
-    let mut unknown: Vec<Pattern> = Default::default();
+    let mut unknown5: Vec<Pattern> = Default::default();
+    let mut unknown6: Vec<Pattern> = Default::default();
 
     for &pattern in patterns {
-        let digit = match pattern.count_ones() {
+        let size = pattern.count_ones();
+
+        let digit = match size {
             2 => 1,
             3 => 7,
             4 => 4,
             7 => 8,
-            _ => {
-                unknown.push(pattern);
+            5 | 6 => {
+                match size {
+                    5 => {
+                        unknown5.push(pattern);
+                    }
+                    6 => {
+                        unknown6.push(pattern);
+                    }
+                    _ => unreachable!(),
+                }
                 continue;
             }
+            _ => unreachable!(),
         };
+
         known[digit] = pattern;
     }
 
-    let mask5 = known[1] ^ known[4];
-    let mask6 = known[7] | known[4];
+    for pattern in unknown6 {
+        if pattern & known[4] == known[4] {
+            known[9] = pattern;
+        } else if pattern & known[1] == known[1] {
+            known[0] = pattern;
+        } else {
+            known[6] = pattern;
+        }
+    }
 
-    for pattern in unknown {
-        match pattern.count_ones() {
-            5 => {
-                if (pattern ^ known[8]) & known[1] == 0 {
-                    known[3] = pattern;
-                } else if pattern & mask5 == mask5 {
-                    known[5] = pattern;
-                } else {
-                    known[2] = pattern;
-                }
-            }
-            6 => {
-                if (pattern ^ known[8]) & known[1] != 0 {
-                    known[6] = pattern;
-                } else if pattern & mask6 == mask6 {
-                    known[9] = pattern;
-                } else {
-                    known[0] = pattern;
-                }
-            }
-            _ => unreachable!(),
+    for pattern in unknown5 {
+        if pattern & known[6] == pattern {
+            known[5] = pattern;
+        } else if pattern & known[1] == known[1] {
+            known[3] = pattern;
+        } else {
+            known[2] = pattern;
         }
     }
 
