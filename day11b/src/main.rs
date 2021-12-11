@@ -1,6 +1,8 @@
 use std::collections::HashSet;
+use std::fmt;
 use std::fs;
 use std::ops::Add;
+use std::str::FromStr;
 
 fn add(a: usize, b: isize) -> usize {
     if b.is_negative() {
@@ -184,25 +186,37 @@ impl OctopusGrid {
     }
 }
 
-fn parse_octopus_grid(s: &str) -> OctopusGrid {
-    let lines: Vec<&str> = s.trim().split('\n').collect();
-    let mut width = 0;
-    let height = lines.len();
+impl FromStr for OctopusGrid {
+    type Err = ();
 
-    let energy_levels: Vec<EnergyLevel> = lines
-        .iter()
-        .map(|line| {
-            let line = line.trim();
-            width = line.len();
-            line.chars().map(|c| c as u8 - 48)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lines: Vec<&str> = s.trim().split('\n').collect();
+        let height = lines.len();
+        let width = lines[0].len();
+
+        let energy_levels: Vec<EnergyLevel> = lines
+            .iter()
+            .map(|line| line.trim().chars().map(|c| c.to_digit(10).unwrap() as u8))
+            .flatten()
+            .collect();
+
+        Ok(Self {
+            height,
+            width,
+            energy_levels,
         })
-        .flatten()
-        .collect();
+    }
+}
 
-    OctopusGrid {
-        height,
-        width,
-        energy_levels,
+impl fmt::Display for OctopusGrid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for location in self.locations() {
+            write!(f, "{}", self.get_energy_level(&location).unwrap())?;
+            if location.column == self.width - 1 {
+                writeln!(f)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -219,7 +233,7 @@ fn find_simultaneous_flash_step(octopus_grid: &mut OctopusGrid) -> usize {
 
 fn main() {
     let input = fs::read_to_string("input").unwrap();
-    let mut octopus_grid = parse_octopus_grid(&input);
+    let mut octopus_grid = OctopusGrid::from_str(&input).unwrap();
     dbg!(find_simultaneous_flash_step(&mut octopus_grid));
 }
 
@@ -282,20 +296,6 @@ mod tests {
             width,
             energy_levels: vec![0; height * width],
         }
-    }
-
-    fn format_octopus_grid(octopus_grid: &OctopusGrid) -> String {
-        octopus_grid
-            .locations()
-            .map(|location| {
-                let energy_level = octopus_grid.get_energy_level(&location).unwrap();
-                if location.column == octopus_grid.width - 1 {
-                    format!("{}\n", energy_level)
-                } else {
-                    format!("{}", energy_level)
-                }
-            })
-            .collect()
     }
 
     #[test]
@@ -431,10 +431,10 @@ mod tests {
 
     #[test]
     fn test_octopus_grid_step() {
-        let mut octopus_grid = parse_octopus_grid("11111\n19991\n19191\n19991\n11111");
+        let mut octopus_grid = OctopusGrid::from_str("11111\n19991\n19191\n19991\n11111").unwrap();
         let flashes = octopus_grid.step();
         assert_eq!(
-            format_octopus_grid(&octopus_grid),
+            format!("{}", &octopus_grid),
             "34543\n40004\n50005\n40004\n34543\n"
         );
         assert!(flashes.contains(&Location { row: 1, column: 1 }));
@@ -449,7 +449,7 @@ mod tests {
 
         let flashes = octopus_grid.step();
         assert_eq!(
-            format_octopus_grid(&octopus_grid),
+            format!("{}", &octopus_grid),
             "45654\n51115\n61116\n51115\n45654\n"
         );
         assert!(flashes.is_empty());
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn test_example() {
         let input = fs::read_to_string("input-test").unwrap();
-        let mut octopus_grid = parse_octopus_grid(&input);
+        let mut octopus_grid = OctopusGrid::from_str(&input).unwrap();
         assert_eq!(find_simultaneous_flash_step(&mut octopus_grid), 195);
     }
 }
