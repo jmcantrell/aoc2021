@@ -1,81 +1,62 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-type Path<'a> = Vec<&'a str>;
+type Cave<'a> = &'a str;
+type Path<'a> = Vec<Cave<'a>>;
 
 #[derive(Debug, Default)]
 pub struct CaveSystem<'a> {
-    connections: HashMap<&'a str, HashSet<&'a str>>,
+    connections: HashMap<Cave<'a>, HashSet<Cave<'a>>>,
 }
 
 impl<'a> CaveSystem<'a> {
-    fn add_connection(&mut self, a: &'a str, b: &'a str) {
+    fn add_connection(&mut self, a: Cave<'a>, b: Cave<'a>) {
         self.connections.entry(a).or_default().insert(b);
         self.connections.entry(b).or_default().insert(a);
     }
 
-    fn find_paths(&'a self) -> HashSet<Path> {
-        fn explore_path<'a>(
-            cave_system: &'a CaveSystem,
-            cave: &'a str,
-            cave_so_nice: &'a str,
-            paths: &mut HashSet<Path<'a>>,
-            path: &mut Path<'a>,
-            visited: &mut HashMap<&'a str, usize>,
-        ) {
-            let visits = visited.entry(cave).or_default();
-            let is_small = cave.contains(char::is_lowercase);
+    fn find_paths(&'a self) -> Vec<Path> {
+        let mut paths: Vec<(Path<'a>, HashMap<Cave<'a>, usize>, bool)> =
+            vec![(vec!["start"], Default::default(), false)];
 
-            if !is_small || *visits == 0 || (cave == cave_so_nice && *visits < 2) {
-                if is_small {
-                    *visits += 1;
+        let mut completed_paths: Vec<Path<'a>> = Default::default();
+
+        while !paths.is_empty() {
+            let (path, visited, twice) = paths.pop().unwrap();
+            let cur_cave = *path.last().unwrap();
+
+            if cur_cave == "end" {
+                completed_paths.push(path);
+                continue;
+            }
+
+            for &adj_cave in self.connections.get(cur_cave).unwrap() {
+                if adj_cave == "start" {
+                    continue;
                 }
 
-                path.push(cave);
+                let is_small = adj_cave.contains(char::is_lowercase);
 
-                if cave == "end" {
-                    paths.insert(path.clone());
-                    return;
+                let mut visited = visited.clone();
+                let visit_count = visited.entry(adj_cave).or_default();
+                let visit_limit = if twice { 1 } else { 2 };
+
+                if is_small && *visit_count >= visit_limit {
+                    continue;
                 }
 
-                if let Some(adj_caves) = cave_system.connections.get(cave) {
-                    for adj_cave in adj_caves.iter() {
-                        let mut path = path.clone();
-                        let mut visited = visited.clone();
-                        explore_path(
-                            cave_system,
-                            adj_cave,
-                            cave_so_nice,
-                            paths,
-                            &mut path,
-                            &mut visited,
-                        );
-                    }
-                }
+                *visit_count += 1;
+
+                let twice = twice || (is_small && *visit_count >= 2);
+
+                let mut path = path.clone();
+                path.push(adj_cave);
+
+                paths.push((path, visited, twice));
             }
         }
 
-        let mut paths: HashSet<Path> = Default::default();
-
-        for &cave_so_nice in self.connections.keys() {
-            if cave_so_nice != "start"
-                && cave_so_nice != "end"
-                && !cave_so_nice.contains(char::is_uppercase)
-            {
-                let mut path: Path = Default::default();
-                let mut visited: HashMap<&'a str, usize> = Default::default();
-                explore_path(
-                    self,
-                    "start",
-                    cave_so_nice,
-                    &mut paths,
-                    &mut path,
-                    &mut visited,
-                );
-            }
-        }
-
-        paths
+        completed_paths
     }
 }
 
@@ -92,12 +73,12 @@ peg::parser! {
                 cave_system
             }
 
-        rule parse_connection() -> [&'input str; 2]
+        rule parse_connection() -> [Cave<'input>; 2]
             = a:parse_cave() "-" b:parse_cave() {
                 [a, b]
             }
 
-        rule parse_cave() -> &'input str
+        rule parse_cave() -> Cave<'input>
             = s:$(['a'..='z' | 'A'..='Z']+)
     }
 }
@@ -112,11 +93,17 @@ fn main() {
 mod tests {
     use super::*;
 
-    fn parse_expected_output(s: &str) -> HashSet<Path> {
+    fn parse_expected_output(s: &str) -> Vec<Path> {
         s.trim()
             .split('\n')
             .map(|line| line.split(',').collect())
             .collect()
+    }
+
+    fn same_vec_items<T: Eq + std::hash::Hash>(a: Vec<T>, b: Vec<T>) -> bool {
+        let a: HashSet<T> = a.into_iter().collect();
+        let b: HashSet<T> = b.into_iter().collect();
+        a.symmetric_difference(&b).count() == 0
     }
 
     #[test]
@@ -126,7 +113,7 @@ mod tests {
         let cave_system = cave_system_parser::parse(&input).unwrap();
         let actual_paths = cave_system.find_paths();
         let expected_paths = parse_expected_output(&output);
-        assert!(actual_paths.symmetric_difference(&expected_paths).count() == 0);
+        assert!(same_vec_items(actual_paths, expected_paths));
     }
 
     #[test]
