@@ -74,8 +74,7 @@ fn get_life_support_rating(numbers: &[isize]) -> isize {
 }
 
 fn parse_input(s: &str) -> Vec<isize> {
-    s.trim()
-        .split_whitespace()
+    s.lines()
         .map(|s| isize::from_str_radix(s, 2).unwrap())
         .collect()
 }
@@ -107,7 +106,7 @@ mod tests {
     #[test]
     fn test_get_max_bit_width() {
         assert_eq!(get_max_bit_width(&[0]), 0);
-        assert_eq!(get_max_bit_width(&[0,1,2,3,4]), 3);
+        assert_eq!(get_max_bit_width(&[0, 1, 2, 3, 4]), 3);
     }
 
     #[test]

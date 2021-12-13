@@ -59,8 +59,7 @@ fn get_power_consumption(numbers: &[isize]) -> isize {
 }
 
 fn parse_numbers(s: &str) -> Vec<isize> {
-    s.trim()
-        .split_whitespace()
+    s.lines()
         .map(|s| isize::from_str_radix(s, 2).unwrap())
         .collect()
 }

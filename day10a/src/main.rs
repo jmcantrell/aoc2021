@@ -69,7 +69,7 @@ fn score_syntax_errors(lines: &[&str]) -> Score {
 }
 
 fn parse_lines(s: &str) -> Vec<&str> {
-    s.trim().split('\n').collect()
+    s.lines().collect()
 }
 
 fn main() {

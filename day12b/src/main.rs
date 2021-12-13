@@ -94,10 +94,7 @@ mod tests {
     use super::*;
 
     fn parse_expected_output(s: &str) -> Vec<Path> {
-        s.trim()
-            .split('\n')
-            .map(|line| line.split(',').collect())
-            .collect()
+        s.lines().map(|line| line.split(',').collect()).collect()
     }
 
     fn same_vec_items<T: Eq + std::hash::Hash>(a: Vec<T>, b: Vec<T>) -> bool {

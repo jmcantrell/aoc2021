@@ -164,7 +164,7 @@ fn multiply_n_largest_basins(heightmap: &Heightmap, n: usize) -> usize {
 }
 
 fn parse_heightmap(s: &str) -> Heightmap {
-    let lines: Vec<&str> = s.trim().split('\n').collect();
+    let lines: Vec<&str> = s.lines().collect();
 
     assert!(!lines.is_empty());
 

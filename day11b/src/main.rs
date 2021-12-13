@@ -190,7 +190,7 @@ impl FromStr for OctopusGrid {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lines: Vec<&str> = s.trim().split('\n').collect();
+        let lines: Vec<&str> = s.lines().collect();
         let height = lines.len();
         let width = lines[0].len();
 

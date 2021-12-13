@@ -16,10 +16,7 @@ fn count_window_increases(values: &[u32], size: usize) -> u32 {
 }
 
 fn parse_depths(s: &str) -> Vec<u32> {
-    s.trim()
-        .split_whitespace()
-        .map(|line| line.parse().unwrap())
-        .collect()
+    s.lines().map(|line| line.parse().unwrap()).collect()
 }
 
 fn main() {

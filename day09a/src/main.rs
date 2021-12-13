@@ -135,7 +135,7 @@ fn sum_risk_levels(heightmap: &Heightmap) -> usize {
 }
 
 fn parse_heightmap(s: &str) -> Heightmap {
-    let lines: Vec<&str> = s.trim().split('\n').collect();
+    let lines: Vec<&str> = s.lines().collect();
 
     assert!(!lines.is_empty());
 
